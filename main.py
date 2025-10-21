@@ -41,15 +41,52 @@ class YouTubeShortsGenerator:
         print("📥 Video downloading...")
         
         ydl_opts = {
-            'format': 'best[height<=720]',
+            'format': 'best[height<=720][ext=mp4]/best[height<=720]/best',
             'outtmpl': 'temp_video.%(ext)s',
             'extractaudio': False,
+            'noplaylist': True,
+            'cookiesfrombrowser': None,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'referer': 'https://www.youtube.com/',
+            'sleep_interval': 1,
+            'max_sleep_interval': 5,
         }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            video_path = f"temp_video.{info['ext']}"
-            return video_path, info
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                video_path = f"temp_video.{info['ext']}"
+                
+                # Ensure we have a valid video format
+                if info['ext'] not in ['mp4', 'webm', 'mkv']:
+                    print(f"⚠️ Unsupported format: {info['ext']}, trying to convert...")
+                    # Try to download in mp4 format
+                    ydl_opts['format'] = 'best[ext=mp4]/best'
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl2:
+                        info = ydl2.extract_info(url, download=True)
+                        video_path = f"temp_video.{info['ext']}"
+                
+                return video_path, info
+        except Exception as e:
+            print(f"❌ Download failed: {e}")
+            print("🔄 Trying alternative download method...")
+            
+            # Alternative method with different options
+            ydl_opts_alt = {
+                'format': 'worst[ext=mp4]/worst',
+                'outtmpl': 'temp_video.%(ext)s',
+                'extractaudio': False,
+                'noplaylist': True,
+            }
+            
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts_alt) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    video_path = f"temp_video.{info['ext']}"
+                    return video_path, info
+            except Exception as e2:
+                print(f"❌ Alternative download also failed: {e2}")
+                raise Exception(f"Could not download video: {e2}")
     
     def extract_audio_and_transcribe(self, video_path):
         """Audio extract करके transcription करता है"""

@@ -11,7 +11,7 @@ def test_basic_functionality():
     """Test basic functionality with a sample URL"""
     
     # Test URL (you can replace with any YouTube video)
-    test_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"  # Rick Roll for testing
+    test_url = "https://www.youtube.com/watch?v=jNQXAC9IVRw"  # Me at the zoo - shorter video
     
     print("🧪 Testing YouTube Shorts Generator...")
     print(f"Test URL: {test_url}")
@@ -22,9 +22,22 @@ def test_basic_functionality():
         
         # Test video download
         print("\n1. Testing video download...")
-        video_path, video_info = generator.download_video(test_url)
-        print(f"✅ Video downloaded: {video_path}")
-        print(f"   Duration: {video_info.get('duration', 'Unknown')} seconds")
+        try:
+            video_path, video_info = generator.download_video(test_url)
+            print(f"✅ Video downloaded: {video_path}")
+            print(f"   Duration: {video_info.get('duration', 'Unknown')} seconds")
+            
+            # Test if file is valid
+            if os.path.exists(video_path):
+                file_size = os.path.getsize(video_path)
+                print(f"   File size: {file_size} bytes")
+            else:
+                print("⚠️ Video file not found after download")
+                return False
+        except Exception as e:
+            print(f"❌ Video download failed: {e}")
+            print("🔄 Testing with fallback method...")
+            return False
         
         # Test audio extraction and transcription
         print("\n2. Testing audio extraction and transcription...")

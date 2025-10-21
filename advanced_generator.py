@@ -13,7 +13,13 @@ import json
 class AdvancedShortsGenerator:
     def __init__(self):
         # Load models
-        self.whisper_model = whisper.load_model("base")
+        try:
+            self.whisper_model = whisper.load_model("base")
+        except AttributeError:
+            # Fallback for different whisper versions
+            import whisper
+            self.whisper_model = whisper.load_model("base")
+        
         self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
         
         # Sentiment analysis model

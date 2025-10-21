@@ -36,9 +36,37 @@ class YouTubeShortsGenerator:
         if use_advanced:
             self.advanced_generator = AdvancedShortsGenerator()
         
-    def download_video(self, url):
+    def download_video(self, url, demo_mode=False):
         """YouTube video download करता है"""
         print("📥 Video downloading...")
+        
+        if demo_mode:
+            print("🎭 Demo mode: Creating mock video data...")
+            # Create a mock video file for testing
+            mock_video_path = "temp_video.mp4"
+            
+            # Create a simple test video using MoviePy
+            from moviepy.editor import ColorClip, TextClip, CompositeVideoClip
+            
+            # Create a simple colored video
+            video_clip = ColorClip(size=(1280, 720), color=(100, 150, 200), duration=30)
+            
+            # Add some text
+            text_clip = TextClip("Demo Video\nYouTube Shorts Generator", 
+                               fontsize=50, color='white', font='Arial-Bold')
+            text_clip = text_clip.set_position('center').set_duration(30)
+            
+            # Composite video
+            final_clip = CompositeVideoClip([video_clip, text_clip])
+            final_clip.write_videofile(mock_video_path, verbose=False, logger=None)
+            
+            mock_info = {
+                'duration': 30,
+                'title': 'Demo Video',
+                'ext': 'mp4'
+            }
+            
+            return mock_video_path, mock_info
         
         ydl_opts = {
             'format': 'best[height<=720][ext=mp4]/best[height<=720]/best',
@@ -351,12 +379,12 @@ class YouTubeShortsGenerator:
         final_clip = CompositeVideoClip([clip] + text_clips)
         return final_clip
     
-    def generate_shorts(self, url):
+    def generate_shorts(self, url, demo_mode=False):
         """Main function - सभी shorts generate करता है"""
         print("🚀 Starting YouTube Shorts Generation...")
         
         # Step 1: Video download
-        video_path, video_info = self.download_video(url)
+        video_path, video_info = self.download_video(url, demo_mode=demo_mode)
         
         # Step 2: Audio extract और transcription
         segments, full_text = self.extract_audio_and_transcribe(video_path)
@@ -448,11 +476,12 @@ class YouTubeShortsGenerator:
 def main():
     parser = argparse.ArgumentParser(description='YouTube Long Form to Viral Shorts Generator')
     parser.add_argument('--url', required=True, help='YouTube video URL')
+    parser.add_argument('--demo', action='store_true', help='Run in demo mode (no actual download)')
     
     args = parser.parse_args()
     
     generator = YouTubeShortsGenerator()
-    shorts = generator.generate_shorts(args.url)
+    shorts = generator.generate_shorts(args.url, demo_mode=args.demo)
     
     print("\n📊 Generated Shorts Summary:")
     for i, short in enumerate(shorts, 1):

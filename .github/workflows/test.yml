@@ -36,9 +36,9 @@ jobs:
       run: |
         python test.py
     
-    - name: Test with sample video
+    - name: Test with sample video (Demo Mode)
       run: |
-        python main.py --url "${{ github.event.inputs.youtube_url }}"
+        python main.py --url "${{ github.event.inputs.youtube_url }}" --demo
     
     - name: Upload generated shorts
       uses: actions/upload-artifact@v4

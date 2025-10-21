@@ -2,7 +2,12 @@ import os
 import cv2
 import numpy as np
 from moviepy.editor import *
-import whisper
+try:
+    import whisper
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    print("⚠️ Whisper not available, using fallback mode")
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import librosa
@@ -13,12 +18,15 @@ import json
 class AdvancedShortsGenerator:
     def __init__(self):
         # Load models
-        try:
-            self.whisper_model = whisper.load_model("base")
-        except AttributeError:
-            # Fallback for different whisper versions
-            import whisper
-            self.whisper_model = whisper.load_model("base")
+        if WHISPER_AVAILABLE:
+            try:
+                self.whisper_model = whisper.load_model("base")
+            except Exception as e:
+                print(f"⚠️ Whisper model loading failed: {e}")
+                print("🔄 Using fallback mode...")
+                self.whisper_model = None
+        else:
+            self.whisper_model = None
         
         self.summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
         

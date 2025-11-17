@@ -36,34 +36,10 @@ class YouTubeShortsGenerator:
         if use_advanced:
             self.advanced_generator = AdvancedShortsGenerator()
         
-    def download_video(self, url, demo_mode=False):
-        """YouTube video download करता है"""
-        print("📥 Video downloading...")
-        
-        if demo_mode:
-            print("🎭 Demo mode: Creating mock video data...")
-            # Create a mock video file for testing
-            mock_video_path = "temp_video.mp4"
-            
-            # Create a simple test video using MoviePy without TextClip to avoid ImageMagick dependency
-            from moviepy.editor import ColorClip
-            
-            # Create a simple colored video with gradient effect
-            video_clip = ColorClip(size=(1280, 720), color=(100, 150, 200), duration=30)
-            
-            # Set FPS for the clip to avoid MoviePy error
-            video_clip.fps = 24
-            
-            # Write the video without text overlay to avoid ImageMagick dependency
-            video_clip.write_videofile(mock_video_path, verbose=False, logger=None)
-            
-            mock_info = {
-                'duration': 30,
-                'title': 'Demo Video',
-                'ext': 'mp4'
-            }
-            
-            return mock_video_path, mock_info
+    def download_video(self, url):
+        """YouTube video download करता है - NO DEMO MODE"""
+        print("📥 Downloading real YouTube video...")
+        print("⚠️ Demo mode removed - processing actual content only")
         
         ydl_opts = {
             'format': 'best[height<=720][ext=mp4]/best[height<=720]/best',
@@ -115,30 +91,22 @@ class YouTubeShortsGenerator:
                 raise Exception(f"Could not download video: {e2}")
     
     def extract_audio_and_transcribe(self, video_path):
-        """Audio extract करके transcription करता है"""
-        print("🎵 Audio extracting और transcribing...")
+        """Audio extract करके transcription करता है with speaker diarization"""
+        print("🎵 Audio extracting, transcribing, and speaker analysis...")
         
         # Audio extract करना
         video = VideoFileClip(video_path)
         
         # Check if video has audio
         if video.audio is None:
-            print("⚠️ No audio track found, using fallback transcription...")
+            print("❌ ERROR: No audio track found in video!")
+            print("🚫 Cannot process content without audio. Please provide a video with audio.")
             video.close()
-            
-            # Fallback: Create dummy segments
-            segments = []
-            for i in range(0, 30, 10):  # Every 10 seconds for 30 second demo
-                segments.append({
-                    "start": i,
-                    "end": min(i + 10, 30),
-                    "text": f"Segment {i//10 + 1} - Demo video content"
-                })
-            
-            return segments, "Demo video transcription placeholder"
+            raise ValueError("Video must contain audio track for transcription and analysis")
         
         audio_path = "temp_audio.wav"
         video.audio.write_audiofile(audio_path, verbose=False, logger=None)
+        video.close()
         
         if self.model is not None:
             try:
@@ -404,12 +372,13 @@ class YouTubeShortsGenerator:
             # Return the original clip without text overlay
             return clip
     
-    def generate_shorts(self, url, demo_mode=False):
-        """Main function - सभी shorts generate करता है"""
-        print("🚀 Starting YouTube Shorts Generation...")
+    def generate_shorts(self, url):
+        """Main function - सभी shorts generate करता है from REAL video content"""
+        print("🚀 Starting AI-Powered YouTube Shorts Generation...")
+        print("🎯 Processing real podcast content for viral moments")
         
-        # Step 1: Video download
-        video_path, video_info = self.download_video(url, demo_mode=demo_mode)
+        # Step 1: Video download (NO DEMO MODE)
+        video_path, video_info = self.download_video(url)
         
         # Step 2: Audio extract और transcription
         segments, full_text = self.extract_audio_and_transcribe(video_path)
@@ -435,29 +404,30 @@ class YouTubeShortsGenerator:
             
             generated_shorts = []
             
-            for i, moment in enumerate(viral_moments[:5]):  # Top 5 shorts
-                start_time = max(0, moment["start"] - 2)  # 2 seconds before
-                end_time = min(video_info.get('duration', 3600), moment["end"] + 2)  # 2 seconds after
+            for i, thread in enumerate(viral_moments[:5]):  # Top 5 shorts
+                start_time = max(0, thread["start"] - 2)  # 2 seconds before
+                end_time = min(video_info.get('duration', 3600), thread["end"] + 2)  # 2 seconds after
                 
                 # Visual analysis
                 visual_data = self.advanced_generator.detect_visual_interest(video_path, start_time, end_time)
                 
-                # Advanced short video create करना
+                # Advanced short video create करना with thread data
                 output_path = f"{output_dir}/short_{i+1}.mp4"
                 self.advanced_generator.create_advanced_short(
                     video_path, start_time, end_time, output_path, 
-                    moment["text"], visual_data, audio_features
+                    thread, visual_data, audio_features
                 )
                 
                 generated_shorts.append({
                     "path": output_path,
-                    "text": moment["text"],
+                    "text": thread["text"],
                     "start_time": start_time,
                     "end_time": end_time,
                     "face_count": visual_data["max_faces"],
-                    "viral_score": moment["viral_score"],
-                    "sentiment": moment["sentiment"]["label"],
-                    "emotion": moment["emotion"]["label"]
+                    "viral_score": thread["viral_score"],
+                    "speakers": thread.get("speakers", ["Unknown"]),
+                    "is_multi_speaker": thread.get("is_multi_speaker", False),
+                    "engagement_score": thread.get("engagement_score", 0)
                 })
             
             # Cleanup
@@ -499,20 +469,22 @@ class YouTubeShortsGenerator:
         return generated_shorts
 
 def main():
-    parser = argparse.ArgumentParser(description='YouTube Long Form to Viral Shorts Generator')
+    parser = argparse.ArgumentParser(description='AI-Powered YouTube Long Form to Viral Shorts Generator')
     parser.add_argument('--url', required=True, help='YouTube video URL')
-    parser.add_argument('--demo', action='store_true', help='Run in demo mode (no actual download)')
     
     args = parser.parse_args()
     
     generator = YouTubeShortsGenerator()
-    shorts = generator.generate_shorts(args.url, demo_mode=args.demo)
+    shorts = generator.generate_shorts(args.url)
     
-    print("\n📊 Generated Shorts Summary:")
+    print("\n📊 Generated AI-Optimized Shorts Summary:")
     for i, short in enumerate(shorts, 1):
+        speakers_text = f"{len(short['speakers'])} speakers" if short.get('is_multi_speaker', False) else "1 speaker"
         print(f"{i}. {short['text'][:50]}...")
         print(f"   Duration: {short['end_time'] - short['start_time']:.1f}s")
-        print(f"   Faces detected: {short['face_count']}")
+        print(f"   Speakers: {speakers_text}")
+        print(f"   Engagement Score: {short.get('engagement_score', 0):.1f}")
+        print(f"   Viral Score: {short.get('viral_score', 0):.1f}")
         print(f"   File: {short['path']}\n")
 
 if __name__ == "__main__":

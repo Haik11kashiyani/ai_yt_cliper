@@ -14,6 +14,7 @@ import librosa
 import soundfile as sf
 from scipy.signal import find_peaks
 import json
+from speaker_analyzer import SpeakerAnalyzer
 
 class AdvancedShortsGenerator:
     def __init__(self):
@@ -37,6 +38,9 @@ class AdvancedShortsGenerator:
         # Emotion detection
         self.emotion_analyzer = pipeline("text-classification", 
                                        model="j-hartmann/emotion-english-distilroberta-base")
+        
+        # Speaker analyzer for conversation analysis
+        self.speaker_analyzer = SpeakerAnalyzer()
         
     def analyze_audio_features(self, audio_path):
         """Audio features analyze करके emotional peaks find करता है"""
@@ -115,40 +119,34 @@ class AdvancedShortsGenerator:
         }
     
     def advanced_content_analysis(self, segments, audio_features):
-        """Advanced content analysis with multiple factors"""
-        print("🧠 Advanced content analysis...")
+        """Advanced content analysis with speaker diarization and meaningful moment detection"""
+        print("🧠 Advanced AI content analysis with speaker detection...")
         
-        viral_moments = []
+        # Analyze speakers and enhance segments
+        enhanced_segments = self.speaker_analyzer.analyze_speakers("temp_audio.wav", segments)
         
-        for i, segment in enumerate(segments):
-            text = segment["text"]
-            start_time = segment["start"]
-            end_time = segment["end"]
-            
-            # Text analysis
-            sentiment = self.sentiment_analyzer(text)[0]
-            emotion = self.emotion_analyzer(text)[0]
-            
-            # Audio analysis for this segment
+        # Identify meaningful moments
+        meaningful_moments = self.speaker_analyzer.identify_meaningful_moments(enhanced_segments)
+        
+        # Group into conversation threads
+        conversation_threads = self.speaker_analyzer.group_conversation_threads(meaningful_moments)
+        
+        # Add audio analysis to threads
+        for thread in conversation_threads:
+            start_time = thread["start"]
+            end_time = thread["end"]
             segment_energy = self.get_segment_energy(audio_features, start_time, end_time)
+            thread["energy"] = segment_energy
             
-            # Calculate viral score
-            viral_score = self.calculate_viral_score(text, sentiment, emotion, segment_energy)
-            
-            viral_moments.append({
-                "text": text,
-                "start": start_time,
-                "end": end_time,
-                "sentiment": sentiment,
-                "emotion": emotion,
-                "energy": segment_energy,
-                "viral_score": viral_score
-            })
+            # Boost score for high energy moments
+            if segment_energy > 0.5:
+                thread["viral_score"] += segment_energy * 5
         
-        # Sort by viral score
-        viral_moments.sort(key=lambda x: x["viral_score"], reverse=True)
+        # Sort by enhanced viral score
+        conversation_threads.sort(key=lambda x: x["viral_score"], reverse=True)
         
-        return viral_moments[:10]
+        print(f"🎯 Found {len(conversation_threads)} meaningful conversation threads")
+        return conversation_threads[:10]
     
     def get_segment_energy(self, audio_features, start_time, end_time):
         """Segment के लिए energy calculate करता है"""
@@ -191,9 +189,9 @@ class AdvancedShortsGenerator:
         return score
     
     def create_advanced_short(self, video_path, start_time, end_time, output_path, 
-                            text_content, visual_data, audio_data):
-        """Advanced short video creation with better effects"""
-        print(f"🎬 Creating advanced short: {output_path}")
+                            thread_data, visual_data, audio_data):
+        """Advanced short video creation with multi-speaker layout and effects"""
+        print(f"🎬 Creating AI-optimized short: {output_path}")
         
         # Extract video clip
         video = VideoFileClip(video_path)
@@ -203,45 +201,118 @@ class AdvancedShortsGenerator:
         clip = clip.resize(height=1920)
         clip = clip.resize(width=1080)
         
-        # Apply visual effects based on analysis
-        if visual_data["max_faces"] > 1:
-            clip = self.create_advanced_side_by_side(clip, visual_data)
+        # Apply intelligent layout based on speakers
+        if thread_data.get("is_multi_speaker", False):
+            clip = self.create_dynamic_multi_speaker_layout(clip, thread_data, visual_data)
         else:
             clip = self.create_advanced_single_person(clip, visual_data)
         
         # Add dynamic background music
         clip = self.add_dynamic_music(clip, audio_data)
         
-        # Add animated text overlay
-        clip = self.add_animated_text(clip, text_content)
+        # Add intelligent text overlay with speaker labels
+        clip = self.add_speaker_aware_text(clip, thread_data)
         
-        # Add transitions
-        clip = clip.fadein(0.3).fadeout(0.3)
+        # Add professional transitions
+        clip = self.add_professional_transitions(clip, thread_data)
         
-        # Export
+        # Export with high quality
         clip.write_videofile(output_path, codec='libx264', audio_codec='aac', 
-                           verbose=False, logger=None)
+                           verbose=False, logger=None, threads=4)
         
         clip.close()
         video.close()
     
-    def create_advanced_side_by_side(self, clip, visual_data):
-        """Advanced side-by-side layout with effects"""
+    def create_dynamic_multi_speaker_layout(self, clip, thread_data, visual_data):
+        """Dynamic multi-speaker layout with smart positioning"""
+        speakers = thread_data.get("speakers", ["Speaker_A", "Speaker_B"])
+        num_speakers = len(speakers)
+        
+        if num_speakers == 2:
+            # Dynamic split-screen for 2 speakers
+            return self.create_two_speaker_layout(clip, thread_data, visual_data)
+        elif num_speakers > 2:
+            # Picture-in-picture for 3+ speakers
+            return self.create_picture_in_picture_layout(clip, thread_data, visual_data)
+        else:
+            # Single speaker fallback
+            return self.create_advanced_single_person(clip, visual_data)
+    
+    def create_two_speaker_layout(self, clip, thread_data, visual_data):
+        """Intelligent two-speaker split-screen with active speaker highlighting"""
         width = clip.w
         height = clip.h
         
-        # Create left and right clips with slight zoom
+        # Create split clips
         left_clip = clip.crop(x1=0, x2=width//2, y1=0, y2=height)
         right_clip = clip.crop(x1=width//2, x2=width, y1=0, y2=height)
         
-        # Add slight zoom effect
-        left_clip = left_clip.resize(1.1).set_position(('left', 'center'))
-        right_clip = right_clip.resize(1.1).set_position(('right', 'center'))
+        # Add subtle zoom to active speaker (simulate with slight resize)
+        left_clip = left_clip.resize(1.05).set_position(('left', 'center'))
+        right_clip = right_clip.resize(1.05).set_position(('right', 'center'))
         
-        # Create final composite
-        final_clip = CompositeVideoClip([left_clip, right_clip], size=(1080, 1920))
+        # Create speaker labels
+        speaker_labels = self.create_speaker_labels(thread_data["speakers"])
+        
+        # Composite with labels
+        final_clip = CompositeVideoClip([left_clip, right_clip] + speaker_labels, size=(1080, 1920))
         
         return final_clip
+    
+    def create_picture_in_picture_layout(self, clip, thread_data, visual_data):
+        """Picture-in-picture layout for 3+ speakers"""
+        # Main speaker (largest)
+        main_clip = clip.crop(width=720, height=1280, x_center=clip.w/2, y_center=clip.h/2)
+        main_clip = main_clip.set_position(('center', 'center'))
+        
+        # Secondary speakers (smaller insets)
+        inset_clips = []
+        positions = [(50, 50), (730, 50), (50, 1370), (730, 1370)]  # Corner positions
+        
+        for i, pos in enumerate(positions[:min(3, len(thread_data["speakers"]) - 1)]):
+            inset = clip.crop(width=300, height=400, x_center=clip.w/4 * (i+1), y_center=clip.h/4 * (i+1))
+            inset = inset.set_position(pos).resize(0.3)
+            inset_clips.append(inset)
+        
+        # Add speaker labels
+        speaker_labels = self.create_speaker_labels(thread_data["speakers"])
+        
+        # Composite all clips
+        final_clip = CompositeVideoClip([main_clip] + inset_clips + speaker_labels, size=(1080, 1920))
+        
+        return final_clip
+    
+    def create_speaker_labels(self, speakers):
+        """Create speaker label overlays"""
+        labels = []
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
+        
+        for i, speaker in enumerate(speakers[:5]):  # Max 5 speakers
+            try:
+                # Create label background
+                label_bg = ColorClip(size=(200, 40), color=(0, 0, 0), duration=10)
+                label_bg = label_bg.set_opacity(0.7)
+                
+                # Create text
+                label_text = TextClip(speaker.replace('_', ' '), fontsize=20, color=colors[i % len(colors)])
+                label_text = label_text.set_position(('center', 'center'))
+                
+                # Composite label
+                label = CompositeVideoClip([label_bg, label_text])
+                
+                # Position label
+                if i == 0:
+                    label = label.set_position((50, 100))
+                elif i == 1:
+                    label = label.set_position((830, 100))
+                else:
+                    label = label.set_position((50, 200 + i * 50))
+                
+                labels.append(label)
+            except Exception as e:
+                print(f"⚠️ Could not create speaker label for {speaker}: {e}")
+        
+        return labels
     
     def create_advanced_single_person(self, clip, visual_data):
         """Advanced single person layout with smart cropping"""
@@ -293,15 +364,18 @@ class AdvancedShortsGenerator:
         
         return clip
     
-    def add_animated_text(self, clip, text):
-        """Animated text overlay with effects"""
-        # Break text into lines
+    def add_speaker_aware_text(self, clip, thread_data):
+        """Add text overlay with speaker attribution and context awareness"""
+        text = thread_data.get("text", "")
+        speakers = thread_data.get("speakers", [])
+        
+        # Break text into readable lines
         words = text.split()
         lines = []
         current_line = ""
         
         for word in words:
-            if len(current_line + " " + word) <= 25:
+            if len(current_line + " " + word) <= 30:
                 current_line += " " + word if current_line else word
             else:
                 lines.append(current_line)
@@ -310,28 +384,77 @@ class AdvancedShortsGenerator:
         if current_line:
             lines.append(current_line)
         
-        # Create animated text clips
+        # Create text clips with animation
         text_clips = []
-        for i, line in enumerate(lines):
-            # Text with animation
-            txt_clip = TextClip(line, fontsize=45, color='white', font='Arial-Bold')
-            txt_clip = txt_clip.set_position(('center', 150 + i * 50))
-            
-            # Add animation
-            txt_clip = txt_clip.set_start(0.5).set_duration(clip.duration - 1)
-            
-            # Fade in/out
-            txt_clip = txt_clip.fadein(0.3).fadeout(0.3)
-            
-            text_clips.append(txt_clip)
+        
+        # Add speaker attribution if multi-speaker
+        if len(speakers) > 1:
+            speaker_text = f"{len(speakers)} Speakers"
+            try:
+                speaker_clip = TextClip(speaker_text, fontsize=25, color='#4ECDC4', font='Arial-Bold')
+                speaker_clip = speaker_clip.set_position(('center', 80)).set_duration(clip.duration)
+                text_clips.append(speaker_clip)
+            except:
+                pass
+        
+        # Add main content text
+        for i, line in enumerate(lines[:3]):  # Max 3 lines
+            try:
+                txt_clip = TextClip(line, fontsize=40, color='white', font='Arial-Bold')
+                txt_clip = txt_clip.set_position(('center', 150 + i * 50))
+                
+                # Staggered animation for each line
+                txt_clip = txt_clip.set_start(i * 0.2).set_duration(clip.duration - i * 0.2)
+                txt_clip = txt_clip.fadein(0.3).fadeout(0.3)
+                
+                text_clips.append(txt_clip)
+            except Exception as e:
+                print(f"⚠️ Text creation failed: {e}")
         
         # Background for text
         if text_clips:
-            bg_clip = ColorClip(size=(1080, len(lines) * 50 + 20), 
-                              color=(0, 0, 0), duration=clip.duration)
-            bg_clip = bg_clip.set_position(('center', 130)).set_opacity(0.6)
-            text_clips.insert(0, bg_clip)
+            try:
+                bg_height = len(lines) * 50 + 40
+                if len(speakers) > 1:
+                    bg_height += 30
+                    
+                bg_clip = ColorClip(size=(900, bg_height), color=(0, 0, 0), duration=clip.duration)
+                bg_clip = bg_clip.set_position(('center', 70)).set_opacity(0.8)
+                text_clips.insert(0, bg_clip)
+            except:
+                pass
         
         # Composite
-        final_clip = CompositeVideoClip([clip] + text_clips)
-        return final_clip
+        try:
+            final_clip = CompositeVideoClip([clip] + text_clips)
+            return final_clip
+        except Exception as e:
+            print(f"⚠️ Text overlay failed: {e}")
+            return clip
+    
+    def add_professional_transitions(self, clip, thread_data):
+        """Add professional transitions based on content type"""
+        try:
+            # Base fade transitions
+            clip = clip.fadein(0.5).fadeout(0.5)
+            
+            # Add zoom effect for high-engagement content
+            if thread_data.get("engagement_score", 0) > 5:
+                # Subtle zoom in the middle
+                zoom_clip = clip.resize(lambda t: 1 + 0.05 * np.sin(t * 2))
+                clip = zoom_clip
+            
+            # Add speed effect for high-energy moments
+            if thread_data.get("energy", 0) > 1:
+                # Slight speed ramp
+                if clip.duration > 10:
+                    # Speed up middle section
+                    first_part = clip.subclip(0, 2)
+                    middle_part = clip.subclip(2, clip.duration - 2).speedx(1.1)
+                    last_part = clip.subclip(clip.duration - 2, clip.duration)
+                    clip = concatenate_videoclips([first_part, middle_part, last_part])
+            
+            return clip
+        except Exception as e:
+            print(f"⚠️ Professional transitions failed: {e}")
+            return clip.fadein(0.3).fadeout(0.3)

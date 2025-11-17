@@ -120,6 +120,23 @@ class YouTubeShortsGenerator:
         
         # Audio extract करना
         video = VideoFileClip(video_path)
+        
+        # Check if video has audio
+        if video.audio is None:
+            print("⚠️ No audio track found, using fallback transcription...")
+            video.close()
+            
+            # Fallback: Create dummy segments
+            segments = []
+            for i in range(0, 30, 10):  # Every 10 seconds for 30 second demo
+                segments.append({
+                    "start": i,
+                    "end": min(i + 10, 30),
+                    "text": f"Segment {i//10 + 1} - Demo video content"
+                })
+            
+            return segments, "Demo video transcription placeholder"
+        
         audio_path = "temp_audio.wav"
         video.audio.write_audiofile(audio_path, verbose=False, logger=None)
         

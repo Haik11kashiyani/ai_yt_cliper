@@ -91,7 +91,7 @@ def generate_shorts_background(url):
             output_path = f"{output_dir}/short_{i+1}.mp4"
             generator.create_short_video(video_path, start_time, end_time, output_path, moment["text"], face_count)
             
-                short_data = {
+            short_data = {
                     "path": output_path,
                     "text": moment["text"],
                     "start_time": start_time,

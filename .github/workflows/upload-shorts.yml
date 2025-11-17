@@ -1,0 +1,151 @@
+name: Upload Generated Shorts
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_url:
+        description: 'YouTube URL to process'
+        required: true
+        default: 'https://www.youtube.com/watch?v=jNQXAC9IVRw'
+  push:
+    branches: [ main ]
+    paths:
+      - 'generated_shorts/**'
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg python3-opencv
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Generate shorts from YouTube
+      run: |
+        python main.py --url "${{ github.event.inputs.youtube_url }}" || echo "Expected failure in CI due to YouTube bot detection"
+        
+    - name: Find and organize generated shorts
+      run: |
+        python video_manager.py
+        
+    - name: Create download instructions
+      run: |
+        cat > DOWNLOAD_INSTRUCTIONS.md << 'EOF'
+        # 📥 How to Download Generated Shorts
+        
+        ## 🎬 Latest Generated Shorts
+        
+        This workflow automatically generates shorts from podcast videos and uploads them as artifacts.
+        
+        ## 📋 Download Steps:
+        
+        1. **Go to Actions Tab**: Click on "Actions" in your GitHub repository
+        2. **Find Latest Run**: Look for the most recent "Upload Generated Shorts" workflow
+        3. **Download Artifacts**: Click on the "test-shorts" artifact to download all videos
+        
+        ## 🔗 Direct Download URLs
+        
+        Each generated short can be downloaded directly:
+        
+        ```
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/test-shorts
+        ```
+        
+        ## 📊 What's Included
+        
+        - **Short Videos**: MP4 files optimized for social media
+        - **Metadata**: JSON files with engagement scores and speaker info
+        - **Summary Report**: Complete analysis of all generated shorts
+        
+        ## 🎯 Video Features
+        
+        - ✅ AI-selected meaningful moments
+        - ✅ Multi-speaker detection and layouts
+        - ✅ Professional transitions and effects
+        - ✅ Engagement-optimized content
+        - ✅ Speaker attribution and analysis
+        
+        ## 📈 Local Usage
+        
+        To generate shorts locally:
+        ```bash
+        python main.py --url "YOUR_YOUTUBE_URL"
+        ```
+        
+        Generated files will be in the `generated_shorts/` directory.
+        
+        ---
+        *Generated on: $(date)*
+        *Repository: ${{ github.repository }}*
+        EOF
+        
+    - name: Upload generated shorts as artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-shorts
+        path: |
+          generated_shorts/
+          DOWNLOAD_INSTRUCTIONS.md
+        retention-days: 30
+        
+    - name: Upload summary report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: summary-report
+        path: |
+          generated_shorts/SHORTS_SUMMARY.md
+          DOWNLOAD_INSTRUCTIONS.md
+        retention-days: 30
+        
+    - name: Create release with shorts (optional)
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        # Check if we have any shorts to upload
+        if [ -d "generated_shorts" ] && [ "$(ls -A generated_shorts/*.mp4 2>/dev/null)" ]; then
+          echo "🎬 Found generated shorts, creating release..."
+          
+          # Create release tag
+          RELEASE_TAG="shorts-$(date +%Y%m%d-%H%M%S)"
+          RELEASE_NAME="AI Generated Shorts - $(date '+%B %d, %Y')"
+          
+          # Create GitHub release
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_NAME" \
+            --notes "AI-generated viral shorts from podcast content
+            
+            ## 📹 Generated Videos
+            - Multi-speaker optimized layouts
+            - Engagement-scored content selection  
+            - Professional video production quality
+            - Speaker attribution and analysis
+            
+            ## 🎯 Features
+            - AI-powered moment detection
+            - Dynamic split-screen for conversations
+            - Optimized for TikTok/Reels/Shorts
+            - Engagement and viral scoring
+            
+            Download the 'test-shorts' artifact for all videos." \
+            generated_shorts/*.mp4 || echo "Release creation failed (may already exist)"
+        else
+          echo "📭 No shorts found to upload"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

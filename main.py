@@ -1,23 +1,33 @@
 import os
-import sys
 import argparse
-import yt_dlp
-import cv2
+import re
+import json
+from moviepy.editor import VideoFileClip, ColorClip, TextClip, CompositeVideoClip, AudioClip
 import numpy as np
-from moviepy.editor import *
+from datetime import datetime
+try:
+    from yt_dlp import YoutubeDL
+    YTDLP_AVAILABLE = True
+except ImportError:
+    YTDLP_AVAILABLE = False
+    print(" yt-dlp not available. Install with: pip install yt-dlp")
+
 try:
     import whisper
     WHISPER_AVAILABLE = True
 except ImportError:
     WHISPER_AVAILABLE = False
-    print("⚠️ Whisper not available, using fallback mode")
-import librosa
-import soundfile as sf
+    print(" Whisper not available, using fallback mode")
+
 from transformers import pipeline
-import json
-from datetime import timedelta
-import re
-from advanced_generator import AdvancedShortsGenerator
+try:
+    from advanced_generator import AdvancedShortsGenerator
+    ADVANCED_AVAILABLE = True
+except ImportError:
+    ADVANCED_AVAILABLE = False
+    print(" Advanced features not available")
+
+from video_manager import VideoManager
 
 class YouTubeShortsGenerator:
     def __init__(self, use_advanced=True):
@@ -25,7 +35,8 @@ class YouTubeShortsGenerator:
             try:
                 self.model = whisper.load_model("base")
             except Exception as e:
-                print(f"⚠️ Whisper model loading failed: {e}")
+                print(f" Whisper model loading failed: {e}")
+                print("  Using fallback mode...")
                 print("🔄 Using fallback mode...")
                 self.model = None
         else:
@@ -406,35 +417,6 @@ class YouTubeShortsGenerator:
             
             for i, thread in enumerate(viral_moments[:5]):  # Top 5 shorts
                 start_time = max(0, thread["start"] - 2)  # 2 seconds before
-                end_time = min(video_info.get('duration', 3600), thread["end"] + 2)  # 2 seconds after
-                
-                # Visual analysis
-                visual_data = self.advanced_generator.detect_visual_interest(video_path, start_time, end_time)
-                
-                # Advanced short video create करना with thread data
-                output_path = f"{output_dir}/short_{i+1}.mp4"
-                self.advanced_generator.create_advanced_short(
-                    video_path, start_time, end_time, output_path, 
-                    thread, visual_data, audio_features
-                )
-                
-                generated_shorts.append({
-                    "path": output_path,
-                    "text": thread["text"],
-                    "start_time": start_time,
-                    "end_time": end_time,
-                    "face_count": visual_data["max_faces"],
-                    "viral_score": thread["viral_score"],
-                    "speakers": thread.get("speakers", ["Unknown"]),
-                    "is_multi_speaker": thread.get("is_multi_speaker", False),
-                    "engagement_score": thread.get("engagement_score", 0)
-                })
-            
-            # Cleanup
-            os.remove(audio_path)
-            
-        else:
-            # Basic analysis (original method)
             viral_moments = self.analyze_content(full_text)
             moments_with_timestamps = self.find_timestamps_for_moments(viral_moments, segments)
             
@@ -464,6 +446,11 @@ class YouTubeShortsGenerator:
         os.remove(video_path)
         if os.path.exists("temp_audio.wav"):
             os.remove("temp_audio.wav")
+        
+        # Create summary report using video manager
+        video_manager = VideoManager()
+        report_path = video_manager.create_summary_report()
+        print(f"📋 Summary report created: {report_path}")
         
         print(f"✅ Generated {len(generated_shorts)} shorts in '{output_dir}' folder!")
         return generated_shorts

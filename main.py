@@ -51,6 +51,9 @@ class YouTubeShortsGenerator:
             # Create a simple colored video with gradient effect
             video_clip = ColorClip(size=(1280, 720), color=(100, 150, 200), duration=30)
             
+            # Set FPS for the clip to avoid MoviePy error
+            video_clip.fps = 24
+            
             # Write the video without text overlay to avoid ImageMagick dependency
             video_clip.write_videofile(mock_video_path, verbose=False, logger=None)
             
@@ -67,11 +70,12 @@ class YouTubeShortsGenerator:
             'outtmpl': 'temp_video.%(ext)s',
             'extractaudio': False,
             'noplaylist': True,
-            'cookiesfrombrowser': None,
+            'cookiesfrombrowser': ('chrome',),
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'referer': 'https://www.youtube.com/',
             'sleep_interval': 1,
             'max_sleep_interval': 5,
+            'ignoreerrors': True,
         }
         
         try:

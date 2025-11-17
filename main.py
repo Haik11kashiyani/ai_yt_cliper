@@ -6,11 +6,19 @@ from moviepy.editor import VideoFileClip, ColorClip, TextClip, CompositeVideoCli
 import numpy as np
 from datetime import datetime
 try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    print("⚠️ OpenCV not available. Install with: pip install opencv-python")
+
+try:
+    import yt_dlp
     from yt_dlp import YoutubeDL
     YTDLP_AVAILABLE = True
 except ImportError:
     YTDLP_AVAILABLE = False
-    print(" yt-dlp not available. Install with: pip install yt-dlp")
+    print("⚠️ yt-dlp not available. Install with: pip install yt-dlp")
 
 try:
     import whisper
@@ -52,6 +60,9 @@ class YouTubeShortsGenerator:
         print("📥 Downloading real YouTube video...")
         print("⚠️ Demo mode removed - processing actual content only")
         
+        if not YTDLP_AVAILABLE:
+            raise Exception("yt-dlp is not available. Install with: pip install yt-dlp")
+        
         ydl_opts = {
             'format': 'best[height<=720][ext=mp4]/best[height<=720]/best',
             'outtmpl': 'temp_video.%(ext)s',
@@ -66,7 +77,7 @@ class YouTubeShortsGenerator:
         }
         
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 video_path = f"temp_video.{info['ext']}"
                 
@@ -75,7 +86,7 @@ class YouTubeShortsGenerator:
                     print(f"⚠️ Unsupported format: {info['ext']}, trying to convert...")
                     # Try to download in mp4 format
                     ydl_opts['format'] = 'best[ext=mp4]/best'
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl2:
+                    with YoutubeDL(ydl_opts) as ydl2:
                         info = ydl2.extract_info(url, download=True)
                         video_path = f"temp_video.{info['ext']}"
                 
@@ -93,7 +104,7 @@ class YouTubeShortsGenerator:
             }
             
             try:
-                with yt_dlp.YoutubeDL(ydl_opts_alt) as ydl:
+                with YoutubeDL(ydl_opts_alt) as ydl:
                     info = ydl.extract_info(url, download=True)
                     video_path = f"temp_video.{info['ext']}"
                     return video_path, info
@@ -219,6 +230,10 @@ class YouTubeShortsGenerator:
     def detect_faces_and_people(self, video_path, start_time, end_time):
         """Video में faces detect करता है"""
         print("👥 Detecting faces...")
+        
+        if not CV2_AVAILABLE:
+            print("⚠️ OpenCV not available, returning default face count")
+            return 1  # Default to 1 face
         
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS)

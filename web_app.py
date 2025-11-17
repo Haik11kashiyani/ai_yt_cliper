@@ -92,23 +92,23 @@ def generate_shorts_background(url):
             generator.create_short_video(video_path, start_time, end_time, output_path, moment["text"], face_count)
             
             short_data = {
-                    "path": output_path,
-                    "text": moment["text"],
-                    "start_time": start_time,
-                    "end_time": end_time,
-                    "face_count": face_count,
-                    "filename": f"short_{i+1}.mp4"
-                }
-                
-                # Add advanced data if available
-                if hasattr(moment, 'viral_score'):
-                    short_data["viral_score"] = moment["viral_score"]
-                if hasattr(moment, 'sentiment'):
-                    short_data["sentiment"] = moment["sentiment"]["label"]
-                if hasattr(moment, 'emotion'):
-                    short_data["emotion"] = moment["emotion"]["label"]
-                
-                generated_shorts.append(short_data)
+                "path": output_path,
+                "text": moment["text"],
+                "start_time": start_time,
+                "end_time": end_time,
+                "face_count": face_count,
+                "filename": f"short_{i+1}.mp4"
+            }
+            
+            # Add advanced data if available
+            if hasattr(moment, 'viral_score'):
+                short_data["viral_score"] = moment["viral_score"]
+            if hasattr(moment, 'sentiment'):
+                short_data["sentiment"] = moment["sentiment"]["label"]
+            if hasattr(moment, 'emotion'):
+                short_data["emotion"] = moment["emotion"]["label"]
+            
+            generated_shorts.append(short_data)
         
         # Cleanup
         os.remove(video_path)

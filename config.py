@@ -1,32 +1,21 @@
-# Configuration for YouTube Shorts Generator
+import os
 
-# Video Settings
-VIDEO_HEIGHT = 1920  # Shorts height
-VIDEO_WIDTH = 1080   # Shorts width
-MAX_SHORTS = 5       # Maximum number of shorts to generate
+# 1. Get the base directory of the project
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Audio Settings
-BACKGROUND_MUSIC_VOLUME = 0.05  # 5% volume for background music
-AUDIO_FADE_DURATION = 0.5       # Fade in/out duration
+# 2. Define the missing VIDEO_DIR variable
+VIDEO_DIR = os.path.join(BASE_DIR, "videos")
 
-# Text Settings
-TEXT_FONT_SIZE = 50
-TEXT_COLOR = 'white'
-TEXT_FONT = 'Arial-Bold'
-MAX_CHARS_PER_LINE = 30
+# 3. Define other useful paths
+OUTPUT_DIR = os.path.join(BASE_DIR, "generated_shorts")
 
-# Processing Settings
-BUFFER_TIME = 2      # Seconds to add before/after key moments
-MIN_SIMILARITY = 0.3 # Minimum similarity for text matching
+# 4. Create directories if they don't exist
+if not os.path.exists(VIDEO_DIR):
+    os.makedirs(VIDEO_DIR)
 
-# Viral Keywords (Hindi + English)
-VIRAL_KEYWORDS = [
-    "amazing", "incredible", "unbelievable", "shocking", "wow", "omg",
-    "you won't believe", "this will blow your mind", "wait for it",
-    "अद्भुत", "अविश्वसनीय", "चौंकाने वाला", "वाह", "क्या बात है",
-    "जबरदस्त", "शानदार", "बेहतरीन", "अच्छा", "बहुत अच्छा"
-]
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
-# Output Settings
-OUTPUT_DIR = "generated_shorts"
-TEMP_DIR = "temp_files"
+# 5. Settings
+MIN_CLIP_DURATION = 15
+MAX_CLIP_DURATION = 60
